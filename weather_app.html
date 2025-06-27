@@ -167,7 +167,7 @@
         forecastHTML += `
           <div class="forecast-day">
             <strong>${label}</strong><br/>
-            ${forecast.temperature_2m_min[i]}°C - ${forecast.temperature_2m_max[i]}°C<br/>
+            <strong> LOW: </strong>${forecast.temperature_2m_min[i]}°C <br/><strong> High: </strong> ${forecast.temperature_2m_max[i]}°C<br/>
             ${desc}
           </div>
         `;
