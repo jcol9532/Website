@@ -50,17 +50,33 @@
       margin: 1rem auto;
       max-width: 800px;
     }
-    .forecast-day {
-      display: inline-block;
-      width: 110px;
-      text-align: center;
-      margin: 0.5rem;
-    }
-    @media (max-width: 600px) {
-      .forecast-day {
-        width: 100%;
-        display: block;
-      }
+    #forecast > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.forecast-day {
+  background: #f0f8ff;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  transition: transform 0.2s ease;
+}
+
+.forecast-day:hover {
+  transform: translateY(-5px);
+}
+
+.forecast-day strong {
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
     }
   </style>
 </head>
@@ -165,12 +181,14 @@
         const label = date.toLocaleDateString(undefined, options);
         const desc = getWeatherDescription(forecast.weathercode[i]);
         forecastHTML += `
-          <div class="forecast-day">
-            <strong>${label}</strong><br/>
-            <strong> LOW: </strong>${forecast.temperature_2m_min[i]}°C <br/><strong> High: </strong> ${forecast.temperature_2m_max[i]}°C<br/>
-            ${desc}
-          </div>
-        `;
+			<div class="forecast-day">
+			    <strong>${label}</strong>
+			    <div>${desc}</div>
+			    <div>🌡️ Low: ${forecast.temperature_2m_min[i]}°C</div>
+			    <div>🔥 High: ${forecast.temperature_2m_max[i]}°C</div>
+			  </div>
+			`;
+
       }
       forecastHTML += `</div>`;
       document.getElementById('forecast').innerHTML = forecastHTML;
