@@ -1,11 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>My Account</title>
-</head>
-<body>
-    <h1>Welcome to Your Account</h1>
-    <p>This is your account page where you can manage your preferences and settings.</p>
+  <meta charset="UTF-8" />
+  <title>Entra ID Login</title>
+  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  
+<style>
+     body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #333;
+      background: #f4f4f4;
+    }
+    header {
+      background: #0078d7;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      background: #0078d7;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #e0e0ff;
+    }
+
+    #user-info {
+      max-width: 800px;
+      margin: 1rem auto;
+      padding: 1rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+	#search {
+      margin: 1rem auto;
+      text-align: center;
+    }
+	#search button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      background: #0078d7;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+
+  </head>
+  <body>
+  <header>
+  <h1>My Account</h1>
+  <h3>Provided by NS IT Specialist </h3>
+  </header>
+  <div id="search">
+  <button onclick="signIn()">Sign in to your Microsoft Account</button>
+  <button onclick="goHome()">Return to the Weather App</button>
+  </div>
+  <div id="user-info" class="hidden"></div>
+
+  <script>
+    const msalConfig = {
+      auth: {
+        clientId: "26d130ae-5e24-4ca9-b213-f74a8f1af4ef",
+        authority: "https://login.microsoftonline.com/014155d2-d3dc-4171-9a8c-dc10212a8614",
+        redirectUri: window.location.href
+      }
+    };
+
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+    const loginRequest = {
+      scopes: ["User.Read"]
+    };
+
+    async function signIn() {
+      try {
+        const loginResponse = await msalInstance.loginPopup(loginRequest);
+        const account = loginResponse.account;
+        showUserInfo(account);
+		updateButtonToLogout();
+      } catch (error) {
+        console.error(error);
+        document.getElementById("user-info").innerText = "Login failed.";
+		document.getElementById("user-info").classList.remove("hidden");
+      }
+    }
+
+function signOut() {
+  msalInstance.logoutPopup({
+    postLogoutRedirectUri: window.location.href
+	}).then(() => {
+    clearUserInfo();
+    updateButtonToSignIn();
+  }).catch(error => {
+    console.error("Logout failed:", error);
+  });
+
+}
+
+function updateButtonToLogout() {
+  const button = document.querySelector("button[onclick='signIn()']");
+  button.textContent = "Log Out";
+  button.setAttribute("onclick", "signOut()");
+}
+
+function updateButtonToSignIn() {
+  const button = document.querySelector("button[onclick='signOut()']");
+  button.textContent = "Sign In with Microsoft Account";
+  button.setAttribute("onclick", "signIn()");
+}
+
+function clearUserInfo() {
+  const userInfoDiv = document.getElementById("user-info");
+  userInfoDiv.innerHTML = "";
+  userInfoDiv.classList.add("hidden");
+}
+
+
+    function showUserInfo(account) {
+      if (account) {
+        const email = account.username;
+        const name = account.name;
+        document.getElementById("user-info").innerHTML = `
+          <p><strong>Display Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+        `;
+		document.getElementById("user-info").classList.remove("hidden");
+      }
+    }
+	
+function goHome() {
+      window.location.href = "https://nsitspecialist.ca"; 
+    }
+
+  </script>
 </body>
 </html>
