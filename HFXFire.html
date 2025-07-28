@@ -106,7 +106,7 @@
 
 
         async function fetchRSS() {
-            const response = await fetch("https://api.rss2json.com/v1/api.json?rss_url=https://www.halifax.ca/safety-security/fire-emergency/hrfe-incident-feed/rss.xml");
+            const response = await fetch("https://rss-to-json-api-48rh.onrender.com/api/rss-to-json?url=https://www.halifax.ca/safety-security/fire-emergency/hrfe-incident-feed/rss.xml");
             const data = await response.json();
             const list = document.getElementById("incident-list");
             list.innerHTML = "";
