@@ -91,20 +91,7 @@
             return "❓";
         }
 		
-		function convertToHalifaxTime(utcDateStr) {
-		  const isoDateStr = utcDateStr.replace(" ", "T") + "Z";
-		  const utcDate = new Date(isoDateStr);
-		  const halifaxFormatter = new Intl.DateTimeFormat('en-CA', {
-			timeZone: 'America/Halifax',
-			hour: '2-digit',
-			minute: '2-digit',
-			second: '2-digit',
-			hour12: true
-		  });
-		  return halifaxFormatter.format(utcDate);
-		  }
-
-
+	
         async function fetchRSS() {
             const response = await fetch("https://rss-to-json-api-48rh.onrender.com/api/rss-to-json?url=https://www.halifax.ca/safety-security/fire-emergency/hrfe-incident-feed/rss.xml");
             const data = await response.json();
@@ -130,7 +117,17 @@
 
                 const icon = getIcon(item.title);
 				
-				const pubDateATC = convertToHalifaxTime(item.pubDate)
+				const Date = item.pubDate
+				const ConDate = new Date(Date);
+				
+				const options = {
+					  hour: '2-digit',
+					  minute: '2-digit',
+					  second: '2-digit',
+					  hour12: true,
+					  timeZone: 'America/Halifax' // Optional: ensures local time zone
+					};
+				const pubDateATC = date.toLocaleTimeString('en-CA', options);
 				
                 const li = document.createElement("li");
                 li.className = "card";
