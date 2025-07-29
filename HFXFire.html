@@ -127,7 +127,7 @@
 					  hour12: true,
 					  timeZone: 'America/Halifax' // Optional: ensures local time zone
 					};
-				const pubDateATC = new Intl.DateTimeFormat('en-US', options).format(date);
+				const pubDateATC = new Intl.DateTimeFormat('en-US', options).format(ConDate);
 				
                 const li = document.createElement("li");
                 li.className = "card";
