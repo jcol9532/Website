@@ -1,0 +1,19 @@
+# Title: Jeff/hosts extensions Additional Ad Blockers 
+#
+# This hosts file is a merged collection of hosts from reputable sources,
+# with a dash of crowd sourcing via GitHub
+#
+# Date: 14 November 2025
+#
+# ===============================================================
+
+# Custom host records are listed here.
+0.0.0.0 adtago.s3.amazonaws.com
+0.0.0.0 advice-ads.s3.amazonaws.com
+0.0.0.0 media.net
+0.0.0.0 analytics.google.com
+0.0.0.0 identify.hotjar.com
+0.0.0.0 insights.hotjar.com
+0.0.0.0 surveys.hotjar.com
+0.0.0.0 careers.hotjar.com
+0.0.0.0 mouseflow.com
