@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Meal & Grocery Planner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom, 1rem); }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex flex-col h-screen overflow-hidden">
+
+  <header class="bg-emerald-700 text-white p-4 pt-8 text-center shadow-md font-semibold text-lg">
+    Meal & Grocery Planner
+  </header>
+
+  <main class="flex-1 overflow-y-auto p-4 pb-24" id="app-content">
+    
+    <!-- PANTRY SECTION -->
+    <section id="tab-pantry" class="tab-page">
+      <h2 class="text-xl font-bold mb-1 text-gray-700">Pantry & Dislikes</h2>
+      <p class="text-xs text-gray-500 mb-3">Check off items in stock and list foods to avoid (e.g., Olives).</p>
+      
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Disliked / Excluded Ingredients:</label>
+        <input type="text" id="dislikes-input" placeholder="e.g. Olives, Capers, Mushrooms" 
+               class="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+               onchange="state.dislikes = this.value; saveState();">
+      </div>
+
+      <h3 class="font-semibold text-gray-700 mb-2 text-sm">Pantry Inventory</h3>
+      <div id="pantry-list" class="space-y-2"></div>
+    </section>
+
+    <!-- MEAL PLANNER SECTION -->
+    <section id="tab-meals" class="tab-page hidden">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-xl font-bold text-gray-700">Weekly Meal Plan</h2>
+        <button onclick="generateAIRecipe()" id="btn-ai-generate" class="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-semibold shadow hover:bg-emerald-700 flex items-center gap-1">
+          <span>✨ AI Healthy Meal</span>
+        </button>
+      </div>
+
+      <div id="ai-status" class="hidden text-xs text-emerald-700 bg-emerald-50 p-3 rounded-xl mb-3 border border-emerald-200">
+        AI is generating a healthy recipe based on your pantry...
+      </div>
+
+      <div id="meals-list" class="space-y-3"></div>
+    </section>
+
+    <!-- INGREDIENT SUBSTITUTION TOOL -->
+    <section id="tab-substitutes" class="tab-page hidden">
+      <h2 class="text-xl font-bold mb-1 text-gray-700">Ingredient Swaps</h2>
+      <p class="text-xs text-gray-500 mb-4">Find healthy alternatives for ingredients you dislike.</p>
+
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4 space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Ingredient to Swap:</label>
+          <input type="text" id="sub-target" placeholder="e.g. Black Olives" class="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Reason / Preference:</label>
+          <input type="text" id="sub-reason" placeholder="e.g. Don't like taste or texture" class="w-full p-2.5 border border-gray-200 rounded-xl text-sm outline-none">
+        </div>
+        <button onclick="getAIAlternatives()" class="w-full bg-emerald-600 text-white py-2 rounded-xl font-semibold text-sm shadow">Suggest Healthy Swaps</button>
+      </div>
+
+      <div id="sub-results" class="space-y-2"></div>
+    </section>
+
+    <!-- SHOPPING LIST & PRICING SECTION -->
+    <section id="tab-shopping" class="tab-page hidden">
+      <h2 class="text-xl font-bold mb-3 text-gray-700">Shopping List & Prices</h2>
+      
+      <!-- Price Comparison Cards -->
+      <div class="grid grid-cols-2 gap-2 mb-4" id="price-summary">
+        <div class="bg-white p-3 rounded-xl shadow border border-gray-100 text-center">
+          <div class="text-xs text-gray-500 font-semibold">Walmart</div>
+          <div class="text-xl font-bold text-blue-600" id="total-walmart">$0.00</div>
+        </div>
+        <div class="bg-white p-3 rounded-xl shadow border border-gray-100 text-center">
+          <div class="text-xs text-gray-500 font-semibold">Superstore</div>
+          <div class="text-xl font-bold text-yellow-600" id="total-superstore">$0.00</div>
+        </div>
+        <div class="bg-white p-3 rounded-xl shadow border border-gray-100 text-center">
+          <div class="text-xs text-gray-500 font-semibold">Sobeys</div>
+          <div class="text-xl font-bold text-emerald-600" id="total-sobeys">$0.00</div>
+        </div>
+        <div class="bg-white p-3 rounded-xl shadow border border-gray-100 text-center">
+          <div class="text-xs text-gray-500 font-semibold">Foodland</div>
+          <div class="text-xl font-bold text-orange-600" id="total-foodland">$0.00</div>
+        </div>
+      </div>
+
+      <h3 class="font-semibold text-gray-700 mb-2 text-sm">Required Items to Buy</h3>
+      <div id="shopping-list" class="space-y-2"></div>
+    </section>
+
+  </main>
+
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2 pb-safe shadow-lg">
+    <button onclick="switchTab('pantry')" id="nav-pantry" class="flex flex-col items-center text-emerald-600 font-medium text-xs py-1">
+      <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      Pantry
+    </button>
+    <button onclick="switchTab('meals')" id="nav-meals" class="flex flex-col items-center text-gray-500 font-medium text-xs py-1">
+      <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m4 4V3m4 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+      Meals
+    </button>
+    <button onclick="switchTab('substitutes')" id="nav-substitutes" class="flex flex-col items-center text-gray-500 font-medium text-xs py-1">
+      <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+      Swaps
+    </button>
+    <button onclick="switchTab('shopping')" id="nav-shopping" class="flex flex-col items-center text-gray-500 font-medium text-xs py-1">
+      <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"></path></svg>
+      Shopping
+    </button>
+  </nav>
+
+  <script>
+    // Canadian Grocery Pricing Benchmarks (Local Averages)
+    const INGREDIENTS = {
+      "Ground Beef (500g)": { walmart: 5.97, superstore: 6.49, sobeys: 6.99, foodland: 7.29 },
+      "Chicken Breast (1kg)": { walmart: 13.00, superstore: 14.50, sobeys: 15.99, foodland: 16.49 },
+      "Pasta (900g)": { walmart: 1.97, superstore: 2.29, sobeys: 2.49, foodland: 2.69 },
+      "Marinara Sauce (650ml)": { walmart: 2.47, superstore: 2.99, sobeys: 3.29, foodland: 3.49 },
+      "Eggs (12 pk)": { walmart: 4.18, superstore: 4.49, sobeys: 4.79, foodland: 4.99 },
+      "Milk (4L)": { walmart: 6.29, superstore: 6.29, sobeys: 6.49, foodland: 6.59 },
+      "Cheddar Cheese (400g)": { walmart: 4.97, superstore: 5.99, sobeys: 6.49, foodland: 6.79 },
+      "Rice (2kg)": { walmart: 4.47, superstore: 4.99, sobeys: 5.49, foodland: 5.79 },
+      "Taco Seasoning (1 pk)": { walmart: 1.27, superstore: 1.49, sobeys: 1.69, foodland: 1.79 },
+      "Tortillas (10 pk)": { walmart: 3.27, superstore: 3.79, sobeys: 3.99, foodland: 4.19 }
+    };
+
+    let state = {
+      pantry: JSON.parse(localStorage.getItem('pantry')) || {},
+      dislikes: localStorage.getItem('dislikes') || '',
+      recipes: JSON.parse(localStorage.getItem('recipes')) || [
+        { name: "Spaghetti Bolognese", ingredients: ["Ground Beef (500g)", "Pasta (900g)", "Marinara Sauce (650ml)"] },
+        { name: "Beef Tacos", ingredients: ["Ground Beef (500g)", "Taco Seasoning (1 pk)", "Tortillas (10 pk)", "Cheddar Cheese (400g)"] }
+      ],
+      selectedMeals: JSON.parse(localStorage.getItem('selectedMeals')) || []
+    };
+
+    function saveState() {
+      localStorage.setItem('pantry', JSON.stringify(state.pantry));
+      localStorage.setItem('dislikes', state.dislikes);
+      localStorage.setItem('recipes', JSON.stringify(state.recipes));
+      localStorage.setItem('selectedMeals', JSON.stringify(state.selectedMeals));
+      render();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-page').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      ['pantry', 'meals', 'substitutes', 'shopping'].forEach(t => {
+        const btn = document.getElementById(`nav-${t}`);
+        if (t === tabId) {
+          btn.classList.add('text-emerald-600');
+          btn.classList.remove('text-gray-500');
+        } else {
+          btn.classList.remove('text-emerald-600');
+          btn.classList.add('text-gray-500');
+        }
+      });
+    }
+
+    async function generateAIRecipe() {
+      const statusEl = document.getElementById('ai-status');
+      statusEl.classList.remove('hidden');
+      
+      const availableItems = Object.keys(state.pantry).filter(k => state.pantry[k]);
+      const excludes = state.dislikes.split(',').map(s => s.trim()).filter(Boolean);
+
+      try {
+        const res = await fetch('/api/generate-recipe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pantryItems: availableItems,
+            excludeItems: excludes,
+            preferences: 'Healthy, simple, balanced meal'
+          })
+        });
+
+        const data = await res.json();
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+        if (parsedData.name && parsedData.ingredients) {
+          state.recipes.unshift({
+            name: parsedData.name + ' (AI)',
+            ingredients: parsedData.ingredients,
+            note: parsedData.healthNote
+          });
+          saveState();
+        }
+      } catch (e) {
+        alert('Failed to generate recipe. Check Cloudflare Worker AI logs.');
+      } finally {
+        statusEl.classList.add('hidden');
+      }
+    }
+
+    async function getAIAlternatives() {
+      const target = document.getElementById('sub-target').value;
+      const reason = document.getElementById('sub-reason').value;
+      const resultsEl = document.getElementById('sub-results');
+
+      if (!target) return;
+      resultsEl.innerHTML = `<div class="text-xs text-gray-400 text-center p-3">Finding healthy swaps...</div>`;
+
+      try {
+        const res = await fetch('/api/substitute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ingredientToReplace: target, reason: reason })
+        });
+        
+        const rawData = await res.json();
+        const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+
+        resultsEl.innerHTML = data.substitutes.map(s => `
+          <div class="p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+            <div class="font-bold text-gray-800 text-sm">${s.name}</div>
+            <div class="text-xs text-gray-500 mt-1">${s.reason}</div>
+          </div>
+        `).join('');
+      } catch (e) {
+        resultsEl.innerHTML = `<div class="text-xs text-red-500 text-center p-3">Could not retrieve substitutes.</div>`;
+      }
+    }
+
+    function renderPantry() {
+      document.getElementById('dislikes-input').value = state.dislikes;
+      const container = document.getElementById('pantry-list');
+      container.innerHTML = Object.keys(INGREDIENTS).map(item => `
+        <label class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+          <span class="font-medium text-gray-700 text-sm">${item}</span>
+          <input type="checkbox" ${state.pantry[item] ? 'checked' : ''} 
+                 onchange="state.pantry['${item}'] = this.checked; saveState();" 
+                 class="w-5 h-5 text-emerald-600 rounded">
+        </label>
+      `).join('');
+    }
+
+    function renderMeals() {
+      const container = document.getElementById('meals-list');
+      container.innerHTML = state.recipes.map((recipe, idx) => {
+        const isSelected = state.selectedMeals.includes(idx);
+        return `
+          <div class="p-4 bg-white rounded-xl shadow-sm border ${isSelected ? 'border-emerald-500 bg-emerald-50/20' : 'border-gray-100'}">
+            <div class="flex justify-between items-center mb-1">
+              <h3 class="font-bold text-gray-800 text-sm">${recipe.name}</h3>
+              <button onclick="toggleMeal(${idx})" class="px-3 py-1 rounded-lg text-xs font-semibold ${isSelected ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600'}">
+                ${isSelected ? 'Selected' : 'Add to Plan'}
+              </button>
+            </div>
+            <p class="text-xs text-gray-500 mb-1">${recipe.ingredients.join(', ')}</p>
+            ${recipe.note ? `<p class="text-[11px] text-emerald-700 italic">💡 ${recipe.note}</p>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleMeal(idx) {
+      if (state.selectedMeals.includes(idx)) {
+        state.selectedMeals = state.selectedMeals.filter(i => i !== idx);
+      } else {
+        state.selectedMeals.push(idx);
+      }
+      saveState();
+    }
+
+    function renderShoppingList() {
+      const requiredItems = new Set();
+      state.selectedMeals.forEach(idx => {
+        if (state.recipes[idx]) {
+          state.recipes[idx].ingredients.forEach(ing => {
+            if (!state.pantry[ing]) requiredItems.add(ing);
+          });
+        }
+      });
+
+      const listContainer = document.getElementById('shopping-list');
+      let totals = { walmart: 0, superstore: 0, sobeys: 0, foodland: 0 };
+
+      if (requiredItems.size === 0) {
+        listContainer.innerHTML = `<div class="text-center p-6 text-gray-400 text-sm">No items needed!</div>`;
+      } else {
+        listContainer.innerHTML = Array.from(requiredItems).map(item => {
+          const prices = INGREDIENTS[item] || { walmart: 3.50, superstore: 3.99, sobeys: 4.29, foodland: 4.49 };
+          totals.walmart += prices.walmart;
+          totals.superstore += prices.superstore;
+          totals.sobeys += prices.sobeys;
+          totals.foodland += prices.foodland;
+
+          return `
+            <div class="p-3 bg-white rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+              <div>
+                <div class="font-semibold text-gray-800 text-sm">${item}</div>
+                <div class="text-xs text-gray-400">WM: $${prices.walmart.toFixed(2)} | SS: $${prices.superstore.toFixed(2)} | SB: $${prices.sobeys.toFixed(2)} | FL: $${prices.foodland.toFixed(2)}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('total-walmart').innerText = `$${totals.walmart.toFixed(2)}`;
+      document.getElementById('total-superstore').innerText = `$${totals.superstore.toFixed(2)}`;
+      document.getElementById('total-sobeys').innerText = `$${totals.sobeys.toFixed(2)}`;
+      document.getElementById('total-foodland').innerText = `$${totals.foodland.toFixed(2)}`;
+    }
+
+    function render() {
+      renderPantry();
+      renderMeals();
+      renderShoppingList();
+    }
+
+    render();
+  </script>
+</body>
+</html>
