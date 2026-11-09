@@ -118,8 +118,7 @@
       Shopping
     </button>
   </nav>
-
-  <script>
+<script>
     // Canadian Grocery Pricing Benchmarks (Local Averages)
     const INGREDIENTS = {
       "Ground Beef (500g)": { walmart: 5.97, superstore: 6.49, sobeys: 6.99, foodland: 7.29 },
@@ -138,8 +137,8 @@
       pantry: JSON.parse(localStorage.getItem('pantry')) || {},
       dislikes: localStorage.getItem('dislikes') || '',
       recipes: JSON.parse(localStorage.getItem('recipes')) || [
-        { name: "Spaghetti Bolognese", ingredients: ["Ground Beef (500g)", "Pasta (900g)", "Marinara Sauce (650ml)"] },
-        { name: "Beef Tacos", ingredients: ["Ground Beef (500g)", "Taco Seasoning (1 pk)", "Tortillas (10 pk)", "Cheddar Cheese (400g)"] }
+        { name: "Spaghetti Bolognese", ingredients: ["Ground Beef (500g)", "Pasta (900g)", "Marinara Sauce (650ml)"], note: "Classic family dinner." },
+        { name: "Beef Tacos", ingredients: ["Ground Beef (500g)", "Taco Seasoning (1 pk)", "Tortillas (10 pk)", "Cheddar Cheese (400g)"], note: "Quick weekday meal." }
       ],
       selectedMeals: JSON.parse(localStorage.getItem('selectedMeals')) || []
     };
@@ -157,6 +156,7 @@
       document.getElementById(`tab-${tabId}`).classList.remove('hidden');
       ['pantry', 'meals', 'substitutes', 'shopping'].forEach(t => {
         const btn = document.getElementById(`nav-${t}`);
+        if (!btn) return;
         if (t === tabId) {
           btn.classList.add('text-emerald-600');
           btn.classList.remove('text-gray-500');
@@ -185,19 +185,30 @@
           })
         });
 
-        const data = await res.json();
-        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+        const rawData = await res.json();
+        // Handle case where Cloudflare returns response string or nested object
+        let data = rawData;
+        if (typeof rawData === 'string') {
+          data = JSON.parse(rawData);
+        } else if (rawData.response) {
+          data = typeof rawData.response === 'string' ? JSON.parse(rawData.response) : rawData.response;
+        }
 
-        if (parsedData.name && parsedData.ingredients) {
+        if (data.name && data.ingredients) {
           state.recipes.unshift({
-            name: parsedData.name + ' (AI)',
-            ingredients: parsedData.ingredients,
-            note: parsedData.healthNote
+            name: data.name,
+            ingredients: data.ingredients,
+            note: data.healthNote || "AI Generated Healthy Meal"
           });
           saveState();
+          // Automatically switch back to meals tab to show the result
+          switchTab('meals');
+        } else {
+          alert('AI returned an unexpected format. Please try again.');
         }
       } catch (e) {
-        alert('Failed to generate recipe. Check Cloudflare Worker AI logs.');
+        console.error(e);
+        alert('Failed to generate recipe. Check console or Worker logs.');
       } finally {
         statusEl.classList.add('hidden');
       }
@@ -219,7 +230,12 @@
         });
         
         const rawData = await res.json();
-        const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+        let data = rawData;
+        if (typeof rawData === 'string') {
+          data = JSON.parse(rawData);
+        } else if (rawData.response) {
+          data = typeof rawData.response === 'string' ? JSON.parse(rawData.response) : rawData.response;
+        }
 
         resultsEl.innerHTML = data.substitutes.map(s => `
           <div class="p-3 bg-white rounded-xl shadow-sm border border-gray-100">
@@ -233,10 +249,15 @@
     }
 
     function renderPantry() {
-      document.getElementById('dislikes-input').value = state.dislikes;
+      const dislikesField = document.getElementById('dislikes-input');
+      if (dislikesField && document.activeElement !== dislikesField) {
+        dislikesField.value = state.dislikes;
+      }
       const container = document.getElementById('pantry-list');
+      if (!container) return;
+
       container.innerHTML = Object.keys(INGREDIENTS).map(item => `
-        <label class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+        <label class="flex items-center justify-between p-3 bg-white rounded-xl shadow-sm border border-gray-100 cursor-pointer">
           <span class="font-medium text-gray-700 text-sm">${item}</span>
           <input type="checkbox" ${state.pantry[item] ? 'checked' : ''} 
                  onchange="state.pantry['${item}'] = this.checked; saveState();" 
@@ -247,6 +268,8 @@
 
     function renderMeals() {
       const container = document.getElementById('meals-list');
+      if (!container) return;
+
       container.innerHTML = state.recipes.map((recipe, idx) => {
         const isSelected = state.selectedMeals.includes(idx);
         return `
@@ -257,7 +280,7 @@
                 ${isSelected ? 'Selected' : 'Add to Plan'}
               </button>
             </div>
-            <p class="text-xs text-gray-500 mb-1">${recipe.ingredients.join(', ')}</p>
+            <p class="text-xs text-gray-500 mb-1"><strong>Ingredients:</strong> ${recipe.ingredients.join(', ')}</p>
             ${recipe.note ? `<p class="text-[11px] text-emerald-700 italic">💡 ${recipe.note}</p>` : ''}
           </div>
         `;
@@ -276,18 +299,21 @@
     function renderShoppingList() {
       const requiredItems = new Set();
       state.selectedMeals.forEach(idx => {
-        if (state.recipes[idx]) {
+        if (state.recipes[idx] && state.recipes[idx].ingredients) {
           state.recipes[idx].ingredients.forEach(ing => {
+            // If the ingredient isn't checked as available in the pantry, add it to shopping list
             if (!state.pantry[ing]) requiredItems.add(ing);
           });
         }
       });
 
       const listContainer = document.getElementById('shopping-list');
+      if (!listContainer) return;
+
       let totals = { walmart: 0, superstore: 0, sobeys: 0, foodland: 0 };
 
       if (requiredItems.size === 0) {
-        listContainer.innerHTML = `<div class="text-center p-6 text-gray-400 text-sm">No items needed!</div>`;
+        listContainer.innerHTML = `<div class="text-center p-6 text-gray-400 text-sm">No items needed! All ingredients are in your pantry or no meals are selected.</div>`;
       } else {
         listContainer.innerHTML = Array.from(requiredItems).map(item => {
           const prices = INGREDIENTS[item] || { walmart: 3.50, superstore: 3.99, sobeys: 4.29, foodland: 4.49 };
@@ -319,7 +345,8 @@
       renderShoppingList();
     }
 
+    // Initial render on page load
     render();
   </script>
-</body>
+ </body>
 </html>
